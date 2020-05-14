@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[26]:
+# In[15]:
 
 
 import numpy as np
@@ -18,6 +18,7 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 from sklearn.utils import shuffle
 
+from tensorflow.keras.datasets import mnist
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import categorical_crossentropy
 import tensorflow as tf
@@ -25,40 +26,31 @@ import numpy as np
 import time
 import sys
 
-
-# In[84]:
-
-
-x = tf.convert_to_tensor(train_data.iloc[:,0])
-print(x)
-
-with tf.GradientTape() as t:
-    t.watch(x)
-    y = tf.reduce_sum(x)
-    z = tf.multiply(y, y)
-
-# Use the tape to compute the derivative of z with respect to the
-# intermediate value y.
-dz_dy = t.gradient(z, y)
-print(dz_dy)
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
-# In[28]:
+# In[16]:
 
 
-def input_Data(Num):
+def Input_Data(Num):
     
     K = 100
     T = 1
+    sigma = 0.4
+    r = 0.5
     
-    output = []
+    interior = []
+    initial = []
+    terminal = []
+    terminal_value = []
     
     for i in range(0, Num):
         S = random.uniform(0,300)
         t = random.uniform(0,T)
-        Bflag = random.choice([1,2])
-        if (Bflag!=1):
-            S_term = math.inf
+        Bflag = random.choice([0,1])
+        if (Bflag!=1.0):
+            S_term = 99999999
             t_term = random.uniform(0,T)
             Term = S_term
         else:
@@ -67,27 +59,40 @@ def input_Data(Num):
             Term = max(S_term - K, 0)
         S_int = random.uniform(0,300)
 
-        output.append([])
+        interior.append([])
+        initial.append([])
+        terminal.append([])
+        terminal_value.append([])
 
-        output[i].append(S)
-        output[i].append(t)
-        output[i].append(S_term)
-        output[i].append(t_term)
-        output[i].append(S_int)
-        output[i].append(Term)
+        interior[i].append(S)
+        interior[i].append(t)
+        terminal[i].append(S_term)
+        terminal[i].append(t_term)
+        initial[i].append(S_int)
+        initial[i].append(0)
+        terminal_value[i].append(Term)
     
-    return output
+    return tf.convert_to_tensor(interior), tf.convert_to_tensor(initial), tf.convert_to_tensor(terminal), tf.convert_to_tensor(terminal_value)
 
 
-# In[52]:
+# In[17]:
 
 
 headers=['Stock', 'Time', 'Term_Stock', 'S_Time', 'Int_Stock', 'Term_Value']
-raw_data = pd.DataFrame(input_Data(10), columns=headers)
-raw_data
+size = 10000
+data_inter, data_intit, data_term, data_termV = Input_Data(size)
 
 
-# In[57]:
+# In[18]:
+
+
+input_data = tf.concat([data_inter, data_intit, data_term], 1)
+with tf.Session() as sess:
+        sess.run(tf.initialize_all_variables())
+        print(sess.run(data_termV))
+
+
+# In[ ]:
 
 
 data = raw_data.copy()
@@ -104,85 +109,87 @@ print(train_data.head())
 print(test_data.head())
 
 
-# In[105]:
-
-
-
-
-
-# In[62]:
+# In[6]:
 
 
 def build_model():
     model = keras.Sequential([
-    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_data.keys())]),
-    layers.Dense(10, activation=tf.nn.relu),
-    layers.Dense(10, activation=tf.nn.relu),
-    layers.Dense(10, activation=tf.nn.relu),
-    layers.Dense(10, activation=tf.nn.relu),
+    layers.Dense(100, activation=tf.nn.relu, input_shape=[2]),
+    layers.Dense(100, activation=tf.nn.relu),
+    layers.Dense(100, activation=tf.nn.relu),
+    layers.Dense(100, activation=tf.nn.relu),
+    layers.Dense(100, activation=tf.nn.relu),
     layers.Dense(1)
   ])
-
-    optimizer = tf.optimizers.Adam(learning_rate=0.0001)
-
-    model.compile(loss= customLoss, optimizer=optimizer, metrics=['mae', 'mse'])
     return model
 
 
-# In[63]:
+# In[32]:
+
+
+def customLoss(Input, Term):
+    S = tf.slice(Input, [0, 0], [-1, 1])
+    t = tf.slice(Input, [0, 1], [-1, 1])
+    int_input = tf.slice(Input, [0, 2], [-1, 2])
+    term_input = tf.slice(Input, [0, 4], [-1, 2])
+    with tf.GradientTape(persistent=True) as tape2:
+        tape2.watch(S)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(S)
+            tape.watch(t)
+            inter_input = tf.concat([S, t], 1)
+            pred_inter = model(inter_input)
+        dC_dS = tape.gradient(pred_inter, S)
+        dC_dt = tape.gradient(pred_inter, t)
+    d2C_dS2 = tape2.gradient(dC_dS, S)
+ 
+    #gradS = tf.gradients(pred_inter,SS)
+    #gradS2 = tf.hessians(pred_inter,SS)
+    
+    L1 = dC_dt + 0.5 * 0.4**2 * S**2 * d2C_dS2 + 0.05 * S * dC_dS - 0.05 * pred_inter
+    L2 = model(int_input)
+    L3 = model(term_input) - Term
+    return L1**2 + L2**2 + L3**2
+#gradS = tf.gradients(pred,S)
+#gradt = tf.gradients(pred,t)
+#gradS2 = tf.hessians(pred,S)
+
+
+# In[33]:
+
+
+def step(Input, Term):
+    with tf.GradientTape() as tape:
+        Loss = tf.math.reduce_sum(customLoss(input_data, data_termV))
+    
+    grads = tape.gradient(Loss, model.trainable_variables)
+    opt.apply_gradients(zip(grads, model.trainable_variables))
+    with tf.Session() as sess:
+        sess.run(tf.initialize_all_variables())
+        print(sess.run(Loss))
+
+
+# In[34]:
 
 
 model = build_model()
+opt = Adam(lr=0.001)
 model.summary()
 
 
-# In[106]:
+# In[35]:
 
 
-pred = model.predict(train_data)
-pred
+model.compile(loss= customLoss, optimizer=opt, metrics=['mae', 'mse'])
 
 
-# In[103]:
+# In[38]:
 
 
-def step(X, Y):
-    Stock = tf.convert_to_tensor(X.iloc[:,0])
-    Time = tf.convert_to_tensor(X.iloc[:,1])
-    with tf.GradientTape() as t:
-        t.watch(Stock)
-        pred = model(X)
-    print(type(pred))
-    dC_dS = t.gradient(pred, Stock)
-
-    return dC_dS
-
-
-# In[104]:
-
-
-step(train_data, train_labels)
-
-
-# In[16]:
-
-
-def customLoss(true,predicted):
-    epsilon = 0.1
-    summ = K.maximum(K.abs(true) + K.abs(predicted) + epsilon, 0.5 + epsilon)
-    smape = K.abs(predicted - true) / summ * 2.0
-    return smape
-
-
-# In[2]:
-
-
-def multilayer_perceptron(x, weights, biases, keep_prob):
-    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
-    layer_1 = tf.nn.relu(layer_1)
-    layer_1 = tf.nn.dropout(layer_1, keep_prob)
-    out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
-    return out_layer
+for i in range(size):
+    a = tf.slice(input_data, [i, 0], [1, 6])
+    b = tf.slice(data_termV, [i, 0], [1, 1])
+    step(a, b)
 
 
 # In[ ]:
