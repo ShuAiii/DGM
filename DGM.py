@@ -1,199 +1,132 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[15]:
+# In[1]:
 
 
 import numpy as np
-import pandas as pd
 import math
-
 import tensorflow as tf
-import keras.backend as K
 from tensorflow import keras
-from tensorflow.keras import layers
 import random
-from scipy.stats import norm
-
 import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
-
-from tensorflow.keras.datasets import mnist
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import categorical_crossentropy
-import tensorflow as tf
-import numpy as np
-import time
-import sys
-
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 
 
-# In[16]:
+# In[2]:
 
 
-def Input_Data(Num):
+def initialize_parameters():
+    initializer_X = tf.initializers.GlorotUniform()
+    initializer_Z = tf.initializers.zeros()
     
+    W1 = tf.Variable(initializer_X(shape = (100,2)))
+    b1 = tf.Variable(initializer_Z(shape = (100,1)))
+    W2 = tf.Variable(initializer_X(shape = (100,100)))
+    b2 = tf.Variable(initializer_Z(shape = (100,1)))
+    W3 = tf.Variable(initializer_X(shape = (100,100)))
+    b3 = tf.Variable(initializer_Z(shape = (1,1)))
+
+    parameters = {"W1": W1,
+                  "b1": b1,
+                  "W2": W2,
+                  "b2": b2,
+                  "W3": W3,
+                  "b3": b3}
+                  
+    
+    return parameters
+
+def forward_propagation(X, parameters):
+    W1 = parameters['W1']
+    b1 = parameters['b1']
+    W2 = parameters['W2']
+    b2 = parameters['b2']
+    W3 = parameters['W3']
+    b3 = parameters['b3']
+    Z1 = tf.add(tf.matmul(W1, X), b1) 
+    A1 = tf.nn.sigmoid(Z1)
+    Z2 = tf.add(tf.matmul(W2, A1), b2)  
+    A2 = tf.nn.sigmoid(Z2)                               
+    Z3 = tf.add(tf.matmul(W3, A2), b3)
+    return Z3
+
+
+# In[3]:
+
+
+def gen():   
     K = 100
     T = 1
     sigma = 0.4
     r = 0.5
+    cap = 1000
     
-    interior = []
-    initial = []
-    terminal = []
-    terminal_value = []
+    S = tf.Variable([random.uniform(0,300)], name = 'S' ,dtype = 'float32')
+    t = tf.Variable([random.uniform(0,T)], name = 'T' ,dtype = 'float32')
     
-    for i in range(0, Num):
-        S = random.uniform(0,300)
-        t = random.uniform(0,T)
-        Bflag = random.choice([0,1])
-        if (Bflag!=1.0):
-            S_term = 99999999
-            t_term = random.uniform(0,T)
-            Term = S_term
-        else:
-            S_term = random.uniform(0,300)
-            t_term = T
-            Term = max(S_term - K, 0)
-        S_int = random.uniform(0,300)
-
-        interior.append([])
-        initial.append([])
-        terminal.append([])
-        terminal_value.append([])
-
-        interior[i].append(S)
-        interior[i].append(t)
-        terminal[i].append(S_term)
-        terminal[i].append(t_term)
-        initial[i].append(S_int)
-        initial[i].append(0)
-        terminal_value[i].append(Term)
+    Bflag = 1
+    if (Bflag!=1.0):
+        S_term = tf.Variable([cap], name = 'S' ,dtype = 'float32')
+        T_term = tf.Variable([T], name = 'T' ,dtype = 'float32')
+        term_input = tf.stack([S_term, T_term], 0)
+        term = tf.Variable([cap], name = 'term' ,dtype = 'float32')
+    else:
+        S_t = random.uniform(0,300)
+        S_term = tf.Variable([S_t], name = 'S' ,dtype = 'float32')
+        T_term = tf.Variable([T], name = 'T' ,dtype = 'float32')
+        term_input = tf.stack([S_term, T_term], 0)
+        term = tf.Variable([max(S_t - K, 0)], name = 'term' ,dtype = 'float32')
+        
+    int_input = tf.Variable([[random.uniform(0,300)], [0]], name = 'term' ,dtype = 'float32')
     
-    return tf.convert_to_tensor(interior), tf.convert_to_tensor(initial), tf.convert_to_tensor(terminal), tf.convert_to_tensor(terminal_value)
+    return S, t, int_input, term, term_input
 
+def CLoss(para):
+    S, t, int_input, term, term_input = gen()
 
-# In[17]:
-
-
-headers=['Stock', 'Time', 'Term_Stock', 'S_Time', 'Int_Stock', 'Term_Value']
-size = 10000
-data_inter, data_intit, data_term, data_termV = Input_Data(size)
-
-
-# In[18]:
-
-
-input_data = tf.concat([data_inter, data_intit, data_term], 1)
-with tf.Session() as sess:
-        sess.run(tf.initialize_all_variables())
-        print(sess.run(data_termV))
-
-
-# In[ ]:
-
-
-data = raw_data.copy()
-data = shuffle(data)
-data.tail()
-
-train_data = data.sample(frac=0.8,random_state=100)
-test_data = data.drop(train_data.index)
-
-train_labels = train_data.pop("Term_Value")
-test_labels = test_data.pop("Term_Value")
-
-print(train_data.head())
-print(test_data.head())
-
-
-# In[6]:
-
-
-def build_model():
-    model = keras.Sequential([
-    layers.Dense(100, activation=tf.nn.relu, input_shape=[2]),
-    layers.Dense(100, activation=tf.nn.relu),
-    layers.Dense(100, activation=tf.nn.relu),
-    layers.Dense(100, activation=tf.nn.relu),
-    layers.Dense(100, activation=tf.nn.relu),
-    layers.Dense(1)
-  ])
-    return model
-
-
-# In[32]:
-
-
-def customLoss(Input, Term):
-    S = tf.slice(Input, [0, 0], [-1, 1])
-    t = tf.slice(Input, [0, 1], [-1, 1])
-    int_input = tf.slice(Input, [0, 2], [-1, 2])
-    term_input = tf.slice(Input, [0, 4], [-1, 2])
-    with tf.GradientTape(persistent=True) as tape2:
+    with tf.GradientTape() as tape2:
         tape2.watch(S)
         with tf.GradientTape(persistent=True) as tape:
-            tape.watch(S)
-            tape.watch(t)
-            inter_input = tf.concat([S, t], 1)
-            pred_inter = model(inter_input)
+            tape2.watch(S)
+            tape2.watch(t)
+            X = tf.stack([S,t],0)
+            tape.watch(X)
+            pred_inter = forward_propagation(X, para)
         dC_dS = tape.gradient(pred_inter, S)
         dC_dt = tape.gradient(pred_inter, t)
     d2C_dS2 = tape2.gradient(dC_dS, S)
- 
-    #gradS = tf.gradients(pred_inter,SS)
-    #gradS2 = tf.hessians(pred_inter,SS)
+
+
+    L1 = dC_dt + 0.5 * 0.4**2 * S**2 * d2C_dS2 + 0.05 * S * dC_dS - tf.math.scalar_mul(0.05, pred_inter)
+    L2 = forward_propagation(int_input, para)
+    L3 = forward_propagation(term_input, para) - term
     
-    L1 = dC_dt + 0.5 * 0.4**2 * S**2 * d2C_dS2 + 0.05 * S * dC_dS - 0.05 * pred_inter
-    L2 = model(int_input)
-    L3 = model(term_input) - Term
-    return L1**2 + L2**2 + L3**2
-#gradS = tf.gradients(pred,S)
-#gradt = tf.gradients(pred,t)
-#gradS2 = tf.hessians(pred,S)
+    return tf.math.reduce_sum(L1**2 + L2**2 + L3**2)
 
 
-# In[33]:
+# In[5]:
 
 
-def step(Input, Term):
+para = initialize_parameters()
+K = tf.keras.backend
+optimizer = tf.optimizers.Adam(learning_rate = 0.001)
+batch_loss = 0
+cost = []
+for j in range(1000):
     with tf.GradientTape() as tape:
-        Loss = tf.math.reduce_sum(customLoss(input_data, data_termV))
+        tape.watch(para)
+        for i in range(100):
+            Loss = CLoss(para)
+            batch_loss += Loss
+        batch_loss = batch_loss / 100
+    grads = tape.gradient(batch_loss, [para["W1"],para["b1"],para["W2"],para["b1"],para["W3"],para["W3"]])
+    optimizer.apply_gradients(zip(grads,[para["W1"],para["b1"],para["W2"],para["b1"],para["W3"],para["W3"]]))
+    print("Batch ", j, " Loss: ", K.get_value(batch_loss))
+    cost.append(K.get_value(batch_loss))
+    batch_loss = 0
     
-    grads = tape.gradient(Loss, model.trainable_variables)
-    opt.apply_gradients(zip(grads, model.trainable_variables))
-    with tf.Session() as sess:
-        sess.run(tf.initialize_all_variables())
-        print(sess.run(Loss))
-
-
-# In[34]:
-
-
-model = build_model()
-opt = Adam(lr=0.001)
-model.summary()
-
-
-# In[35]:
-
-
-model.compile(loss= customLoss, optimizer=opt, metrics=['mae', 'mse'])
-
-
-# In[38]:
-
-
-for i in range(size):
-    a = tf.slice(input_data, [i, 0], [1, 6])
-    b = tf.slice(data_termV, [i, 0], [1, 1])
-    step(a, b)
-
-
-# In[ ]:
-
-
-
+plt.plot(np.squeeze(cost))
+plt.ylabel('cost')
+plt.xlabel('Batches')
+plt.show()   
 
