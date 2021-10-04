@@ -1,0 +1,37 @@
+name: DGM autobuild
+
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    paths:
+    - ".github/workflows/autobuild_dgm.yaml"
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          lfs: false
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to ghcr
+        uses: docker/login-action@v1
+      -
+        name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          file: docker/Dockerfile
+          target: gpu
+          tags: ghcr.io/shuaiii/dgm:latest
+          cache-from: type=registry,ref=ghcr.io/shuaiii/dgm:latest
+          cache-to: type=inline

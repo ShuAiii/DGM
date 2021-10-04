@@ -9,9 +9,7 @@ Created on Thu May 21 21:21:57 2020
 
 import numpy as np
 import tensorflow as tf
-import random
 import matplotlib.pyplot as plt
-import DGMnets
 import DGMnet2
     
 import pandas as pd
@@ -20,9 +18,6 @@ import seaborn as sns
 
 from scipy.stats import norm
 import math
-from mpl_toolkits.mplot3d import Axes3D
-from tensorflow import keras
-from tensorflow.keras import layers
 
 T = 1
 sigma1 = 0.4
@@ -79,7 +74,7 @@ def graph(model,k):
     plt.show()
     
 
-model = DGMnet2.DGMNet(3,50,2)
+model = DGMnet2.DGMNet(3, 50, 2)
 
 
 # In[3]:

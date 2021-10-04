@@ -1,0 +1,31 @@
+services:
+  dgm: &dgm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    image: ghcr.io/shuaiii/dgm:latest
+    container_name: dgm
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./data:/home/app_user/app/data
+      - ./src:/home/app_user/app/src
+      - ./conf:/home/app_user/app/conf
+      - ./train.py:/train.py
+
+  dgm_cpu: &dgm_cpu
+    image: ghcr.io/shuaiii/dgm:latest
+    container_name: dgm_cpu
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./data:/home/app_user/app/data
+      - ./src:/home/app_user/app/src
+      - ./conf:/home/app_user/app/conf
+      - ./train.py:/train.py

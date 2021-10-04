@@ -1,19 +1,13 @@
 import numpy as np
 import tensorflow as tf
-import random
 import matplotlib.pyplot as plt
-import DGMnets
-import DGMnet2
-    
+from stashed import DGMnet2
+
 import pandas as pd
 import seaborn as sns
 
-
-from scipy.stats import norm
 import math
-from mpl_toolkits.mplot3d import Axes3D
 from tensorflow import keras
-from tensorflow.keras import layers
 from matplotlib import cm
 
 K = tf.keras.backend
@@ -28,9 +22,8 @@ cap = 1000
 floor = 0
 
 spreaddata = pd.read_csv("/Users/Jkzhang/Desktop/GitHub/DGM/SpreadFourierK4.csv", header=None)
-spreaddata = spreaddata.iloc[:,0].to_numpy()
 
-def graph(model,model_bsm,k):
+def graph(model, model_bsm, k):
     B = []
     DGM = []
     X = []
@@ -40,12 +33,42 @@ def graph(model,model_bsm,k):
         I.append(i)
         for j in range(5,105,5):
             X.append(j)
-            Y.append(i)
+            Y.append(i)  
+    '''
+    M = np.transpose(np.reshape(spreaddata, newshape=(11,11)))
+    
+    X = np.array(X)
+    Y = np.array(Y)
+    
+    S1_test = tf.Variable(X, dtype = 'float64')
+    S2_test = tf.Variable(Y, dtype = 'float64')
+    T_test = tf.Variable(np.zeros(shape=(121)), dtype = 'float64')
     
     
+    Input = tf.stack([S1_test, S2_test, T_test], axis=1)
+    DGM = model(Input)
+    DGM = K.get_value(tf.reshape(DGM, shape=(11,11)))
     
-    #M = np.transpose(np.reshape(spreaddata, newshape=(22,22)))
+    error = np.round(DGM - M, decimals=2)
     
+    Mdata = pd.DataFrame(DGM - M, columns=I, index=I)
+    
+    ax = sns.heatmap(Mdata, cmap="coolwarm")
+    ax.invert_yaxis()
+    plt.title("Liquidity Value Adjustment (Full Impact) on epoch: " + str(k))
+    plt.xlabel(r"$S_1$")
+    plt.ylabel(r"$S_2$")
+    plt.show()
+    
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    surf = ax.plot_surface(I, I, DGM, cmap=cm.coolwarm,
+                       linewidth=0, antialiased=False)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+
+    plt.show()
+    '''
+    #M = np.transpose(np.reshape(spreaddata, newshape=(11,11)))
     X = np.array(X)
     Y = np.array(Y)
     XX, YY = np.meshgrid(I, I)
@@ -61,54 +84,42 @@ def graph(model,model_bsm,k):
     
     M = model_bsm(Input)
     M = K.get_value(tf.reshape(M, shape=(20,20)))
+
     
     error = np.round(DGM - M, decimals=2)
+
     Mdata = pd.DataFrame(error, columns=I, index=I)
     
     ax = sns.heatmap(Mdata, cmap="coolwarm")
     ax.invert_yaxis()
-    plt.title("Liquidity Value Adjustment (Part Impact) on epoch: " + str(k))
+    plt.title("LVA (Full Impact) on epoch: " + str(k))
     plt.xlabel(r"$S_1$")
     plt.ylabel(r"$S_2$")
     plt.show()
-    
+
     fig1 = plt.figure()
     ax1 = fig1.gca(projection='3d')
     surf1 = ax1.plot_surface(XX, YY, Mdata, cmap=cm.coolwarm, linewidth=0, antialiased=False)
     fig1.colorbar(surf1, shrink=0.7, aspect=10)
     ax1.invert_yaxis()
-    plt.title("LVA    " + r"$\epsilon=0.3$    Batch: " + str(k))
+    plt.title(r"$\epsilon=0.03$    Epoch: " + str(k))
     plt.xlabel(r"$S_1$")
     plt.ylabel(r"$S_2$")
     plt.tight_layout()
     plt.show()
     
-    '''
+    
     fig2 = plt.figure()
     ax2 = fig2.gca(projection='3d')
     surf2 = ax2.plot_surface(XX, YY, DGM, cmap=cm.coolwarm, linewidth=0, antialiased=False)
     fig2.colorbar(surf2, shrink=0.7, aspect=10)
-    plt.title("Option Price    " + r"$\epsilon=0.3$    Batch: " + str(k))
+    plt.title(r"$\epsilon=0.03$    Epoch: " + str(k))
     plt.xlabel(r"$S_1$")
     plt.ylabel(r"$S_2$")
     ax2.invert_yaxis()
     plt.tight_layout()
     plt.show()
-    '''
-
-
-model = DGMnet2.DGMNet(3,50,2)
-
-model_bsm = keras.models.load_model('/Users/Jkzhang/Desktop/GitHub/DGM/Spread32.h5')
-old_weights = model_bsm.get_weights()
-
-
-K.set_floatx('float64')
-wsp = [w.astype(K.floatx()) for w in old_weights]
-
-model.set_weights(wsp)
-
-model_bsm.set_weights(wsp)
+    
 
 def tfnormcdf(tensor):
     return tf.math.scalar_mul(0.5, tf.math.erfc(-tf.math.scalar_mul(math.sqrt(0.5), tensor)))
@@ -121,8 +132,8 @@ def tf_bsm(S1, t, strike):
 def tf_impact(s1,s2,t):
     eta = 0.03
     beta = 100
-    s1I = tf.cast(tf.math.greater(s1,0), tf.float64) * tf.cast(tf.math.less(s1,cap), tf.float64)
-    s2I = tf.cast(tf.math.greater(s2,0), tf.float64) * tf.cast(tf.math.less(s2,cap), tf.float64)
+    s1I = tf.cast(tf.math.greater(s1,0),tf.float64) * tf.cast(tf.math.less(s1,cap),tf.float64)
+    s2I = tf.cast(tf.math.greater(s2,0),tf.float64) * tf.cast(tf.math.less(s2,cap),tf.float64)
     I = s1I * s2I
     return eta * (1-tf.math.exp(-beta * tf.math.pow(T - t,3/2))) * I
     
@@ -174,25 +185,9 @@ def gen(batch_size):
     
     return S1, S2, t, initial, int_input, X_bound, bound
 
-def CLoss(model,model_bsm, b_size):
-    S1, S2, t, initial, int_input, X_bound, bound = gen(b_size) #, X_bound1, bound1, X_bound2, bound2, X_bound3, bound3, X_bound4, bound4 = gen(b_size)
-    
-    with tf.GradientTape(persistent=True) as tape2:
-        tape2.watch(S1)
-        tape2.watch(S2)
-        with tf.GradientTape(persistent=True) as tape:
-            tape2.watch(S1)
-            tape2.watch(S2)
-            X = tf.concat([S1,S2,t], axis=1)
-            Vbs = model_bsm(X)
-        bs1 = tape.gradient(Vbs, S1)
-        bs2 = tape.gradient(Vbs, S2)
-    bs11 = tape2.gradient(bs1, S1)
-    bs12n = tape2.gradient(bs1, S2)
-    bs21n = tape2.gradient(bs2, S1)
-    bs12 = (bs12n + bs21n) / 2
-    
-    
+def CLoss(model, b_size):
+    S1, S2, t , initial, int_input, X_bound, bound = gen(b_size)
+
     with tf.GradientTape(persistent=True) as tape2:
         tape2.watch(S1)
         tape2.watch(S2)
@@ -213,11 +208,18 @@ def CLoss(model,model_bsm, b_size):
     
     
     impact = tf_impact(S1,S2,t)
-    deno = 1 - bs11 * impact
+    #print("Impact: ",tf.math.reduce_mean(impact))
+    deno = 1 - d2C_dS1 * impact
     
-    v11 =  d2C_dS1 * (sigma1**2 * S1**2 + impact**2 * bs12**2 * sigma2**2 * S2**2 + 2 * impact * bs12 * rho * sigma1 * sigma2 * S1 * S2) / (2 * deno**2)
-    v12 = d2C_dS12 * (rho * sigma1 * sigma2 * S1 * S2 + impact * bs12 * sigma2**2 * S2**2) / deno
+    v11 = 0.5 * d2C_dS1 * (sigma1**2 * S1**2 + impact**2 * d2C_dS12**2 * sigma2**2 * S2**2 + 2 * impact * d2C_dS12 * rho * sigma1 * sigma2 * S1 * S2) / (deno**2)
+    v12 = d2C_dS12 * (rho * sigma1 * sigma2 * S1 * S2 + impact * d2C_dS12 * sigma2**2 * S2**2) / deno
     v22 = 0.5 * sigma2**2 * S2**2 * d2C_dS2
+    #v11 = 0.5 * d2C_dS1 * sigma1**2 * S1**2 
+    #v12 = d2C_dS12 * rho * sigma1 * sigma2 * S1 * S2 
+    #v22 = 0.5 * sigma2**2 * S2**2 * d2C_dS2
+    #print("s11",tf.math.reduce_mean(v11- 0.5 * sigma1**2 * S1**2 * d2C_dS1))
+    #print("s12",tf.math.reduce_mean(v12 -  rho * sigma1 * sigma2 * S1 * S2 * d2C_dS12))
+    #print("s22",tf.math.reduce_mean(v22 - + 0.5 * sigma2**2 * S2**2 * d2C_dS2))
     L1 = dC_dt + r * S1 * dC_dS1 + r * S2 * dC_dS2 + v11 + v12 + v22 - r * V
     L2 = model(int_input) - initial
     L3 = model(X_bound) - bound
@@ -226,32 +228,47 @@ def CLoss(model,model_bsm, b_size):
 
 
 # In[5]:
+    
+def runNet():
+    model = DGMnet2.DGMNet(3, 50, 2)
+    
+    model_bsm = keras.models.load_model('/Users/Jkzhang/Desktop/GitHub/DGM/Spread32.h5')
+    old_weights = model_bsm.get_weights()
 
-epoch= 200
-batch_number = 10
-batch_size = 1024
 
-
-batch_loss = 0
-cost = []
-learning_rate = 0.0000005
-#learning_rate = learning_rate * 0.5 ** (k/epoch)
-optimizer = tf.optimizers.Adam(learning_rate = learning_rate)
-
-for k in range(epoch):
-    for j in range(batch_number):
-        with tf.GradientTape() as tape:
-            batch_loss = CLoss(model, model_bsm, batch_size)
-        grads = tape.gradient(batch_loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(grads,model.trainable_variables))
-        print("Epoch: ",k+1, ". Batch ", j+1, " Loss: ", K.get_value(batch_loss),". Learning Rate: ",learning_rate)
-        cost.append(math.log(K.get_value(batch_loss)))
-        batch_loss = 0
-    graph(model,model_bsm,k+1)
-    model.save_weights('/Users/Jkzhang/Desktop/GitHub/DGM/SpreadPart64/003/weight' + str(k+1))
-plt.plot(np.squeeze(cost))
-plt.ylabel('cost')
-plt.xlabel('Batches')
-plt.show()   
+    K.set_floatx('float64')
+    wsp = [w.astype(K.floatx()) for w in old_weights]
+    
+    model.set_weights(wsp)
+    model_bsm.set_weights(wsp)
+    
+    epoch= 100
+    batch_number = 10
+    batch_size = 1024
+    
+    
+    batch_loss = 0
+    cost = []
+    learning_rate = 0.0000005
+    #learning_rate = learning_rate * 0.5 ** (k/epoch)
+    optimizer = tf.optimizers.Adam(learning_rate = learning_rate)
+    
+    for k in range(epoch):
+        for j in range(batch_number):
+            with tf.GradientTape() as tape:
+                batch_loss = CLoss(model,batch_size)
+            grads = tape.gradient(batch_loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads,model.trainable_variables))
+            print("Epoch: ",k+1, ". Batch ", j+1, " Loss: ", K.get_value(batch_loss),". Learning Rate: ",learning_rate)
+            cost.append(math.log(K.get_value(batch_loss)))
+            batch_loss = 0
+        graph(model,model_bsm,k+1)
+        model.save_weights('/Users/Jkzhang/Desktop/GitHub/DGM/SpreadFull64/003/weight' + str(k+1))
+    plt.plot(np.squeeze(cost))
+    plt.ylabel('cost')
+    plt.xlabel('Batches')
+    plt.show()   
 
 #print(DGM-M)
+    
+runNet()

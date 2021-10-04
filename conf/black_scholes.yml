@@ -1,0 +1,23 @@
+training:
+  epoch: 1000
+  loss: bsm_call
+
+dataset:
+  name: bsm_call
+  batch_size: 250
+  directory: /home/app_user/app/data/dgm
+  variables: {T: 5,
+              t: [0, 5],
+              S: [0.01, 100],
+              r: [-0.05, 0.1],
+              sigma: [0.01, 0.4]}
+  train:
+    num_batches: 2000
+  validation:
+    num_batches: 5
+
+network:
+  net: DGMNet
+  input_dim: 4
+  width: 200
+  depth: 5

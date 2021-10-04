@@ -2,15 +2,11 @@
 
 import numpy as np
 import tensorflow as tf
-import random
 import matplotlib.pyplot as plt
 
 from scipy.stats import norm
 import math
-from tensorflow import keras
-from tensorflow.keras import layers
 
-import DGMnets
 import DGMnet2
 
 
@@ -19,7 +15,7 @@ import DGMnet2
 #model = DGMnets.DGMNet(3,50)
 
 
-model = DGMnet2.DGMNet(3,50)
+model = DGMnet2.DGMNet(3, 50)
 
 def BSM(S):
     K = 100
