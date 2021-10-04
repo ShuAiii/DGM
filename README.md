@@ -9,7 +9,8 @@ out-of-the-box in Docker containers. It is also highly customizable.
 
 ## Build and run Docker container
 `make build_dgm` will pull the base tensorflow image and build the DGM source
-over the base image. `make dgm` will run the image as a container.
+over the base image. `make dgm` will run a container of the image with gpu capability, 
+`make dgm_cpu` will run a cpu only container.
 
 ## Example
 ### Black-Scholes call option
