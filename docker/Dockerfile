@@ -10,6 +10,5 @@ RUN pip install click
 RUN pip install wandb
 
 COPY src src
-COPY data data
 COPY conf conf
 COPY train.py train.py
