@@ -5,7 +5,7 @@ differential equations. This particular implementation can be run, straight
 out-of-the-box in Docker containers. It is also highly customizable.
 
 ## Install
-`git fetch https://github.com/ShuAiii/DGM.git`
+`gh repo clone ShuAiii/DGM`
 
 ## Build and run Docker container
 `make build_dgm` will pull the base tensorflow image and build the DGM source
