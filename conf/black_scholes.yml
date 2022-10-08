@@ -1,23 +1,21 @@
 training:
-  epoch: 1000
+  steps: 100
+  validation_frequency: 10    # This is the frequency of validation as well as logging metrics
   loss: bsm_call
+  use_wandb: false
+  project: DGM
 
 dataset:
-  name: bsm_call
-  batch_size: 250
-  directory: /home/app_user/app/data/dgm
+  batch_size: 1000
   variables: {T: 5,
               t: [0, 5],
               S: [0.01, 100],
-              r: [-0.05, 0.1],
-              sigma: [0.01, 0.4]}
-  train:
-    num_batches: 2000
-  validation:
-    num_batches: 5
+              r: 0.05,
+              sigma: 0.4,
+              K: 5}
 
 network:
   net: DGMNet
-  input_dim: 4
+  input_dim: 2
   width: 200
   depth: 5
