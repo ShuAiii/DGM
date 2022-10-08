@@ -1,0 +1,13 @@
+data/
+.ipynb_checkpoints
+.vs
+wandb/
+*.csv
+*.ckpt
+*.parquet
+*.pt
+*.npy
+.idea/
+lightning_logs/
+__pycache__
+conf/secrets/creds.yml
