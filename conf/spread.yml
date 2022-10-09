@@ -2,21 +2,24 @@ training:
   root_dir: ./project/dgm/
   steps: 50000
   validation_frequency: 100    # This is the frequency of validation as well as logging metrics
-  loss: bsm_call
+  loss: spread_call
   use_wandb: false
   project: dgm
 
 dataset:
   batch_size: 500
-  variables: {T: 5,
+  variables: {T: 1,
               t: [0, 5],
-              S: [0.01, 100],
+              S1: [0.01, 100],
+              S2: [0.01, 100],
               r: 0.05,
-              sigma: 0.4,
-              K: 5}
+              sigma1: 0.4,
+              sigma2: 0.4,
+              K: 5,
+              rho: 0.5}
 
 network:
   net: DGMNet
-  input_dim: 2
-  width: 200
-  depth: 5
+  input_dim: 3
+  width: 400
+  depth: 2

@@ -1,11 +1,13 @@
 """"""
 import pdb
+import os
 from typing import Tuple
 import tensorflow as tf
 
 from .nets import get_model
 from .loss import get_loss
 from .dataset import Dataset
+from pathlib import Path
 
 
 class Experiment:
@@ -19,11 +21,16 @@ class Experiment:
                  logger
                  ):
 
+        self.root_dir = training_kwargs["root_dir"]
+        self.save_path = os.path.join(self.root_dir, training_kwargs['loss'])
         self.pde_params = dataset_kwargs["variables"]
         self.build_network(network_kwargs)
         self.build_dataset(dataset_kwargs)
         self.build_trainer(training_kwargs)
         self.logger = logger
+
+        # Create a project directory
+        Path(training_kwargs["root_dir"]).mkdir(parents=True, exist_ok=True)
 
     def build_dataset(self, dataset_kwargs) -> None:
         """
@@ -87,6 +94,9 @@ class Experiment:
             train_loss = self.train_step()
             if run_eval:
                 validation_loss, validation_mae = self.validation_step()
+                pdb.set_trace()
+                self.model.save_weights(self.save_path)
+                #self.model.load_weights(self.save_path)
                 self.logger("Train Loss", train_loss)
                 self.logger("Validation Loss", validation_loss)
                 self.logger("Validation MAE", validation_mae)

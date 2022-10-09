@@ -41,7 +41,7 @@ def parse_params(params: dict):
 
 
 @click.command()
-@click.option('-c', '--path', required=True, type=str, help="Path of the training conf file",
+@click.option('-p', '--path', required=True, type=str, help="Path of the training conf file",
               default="/home/app_user/app/conf/black_scholes.yml")
 def launch_train(path: str) -> None:
 
@@ -49,8 +49,6 @@ def launch_train(path: str) -> None:
         params = yaml.load(f, Loader=yaml.FullLoader)
 
     params = parse_params(params)
-
-    print(params)
 
     logger = get_logger(params)
 

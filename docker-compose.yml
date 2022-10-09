@@ -17,6 +17,7 @@ services:
       - ./src:/home/app_user/app/src
       - ./conf:/home/app_user/app/conf
       - ./train.py:/home/app_user/app/train.py
+      - ./project:/home/app_user/app/project
 
   dgm_cpu: &dgm_cpu
     image: ghcr.io/shuaiii/dgm:latest
@@ -29,3 +30,4 @@ services:
       - ./src:/home/app_user/app/src
       - ./conf:/home/app_user/app/conf
       - ./train.py:/home/app_user/app/train.py
+      - ./project:/home/app_user/app/project
