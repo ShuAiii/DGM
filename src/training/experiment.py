@@ -94,9 +94,7 @@ class Experiment:
             train_loss = self.train_step()
             if run_eval:
                 validation_loss, validation_mae = self.validation_step()
-                pdb.set_trace()
                 self.model.save_weights(self.save_path)
-                #self.model.load_weights(self.save_path)
                 self.logger("Train Loss", train_loss)
                 self.logger("Validation Loss", validation_loss)
                 self.logger("Validation MAE", validation_mae)

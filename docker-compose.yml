@@ -31,3 +31,4 @@ services:
       - ./conf:/home/app_user/app/conf
       - ./train.py:/home/app_user/app/train.py
       - ./project:/home/app_user/app/project
+      - ./test.py:/home/app_user/app/test.py
